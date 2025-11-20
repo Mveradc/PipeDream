@@ -1,15 +1,27 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import shutil
 import os
 import base64
+from dotenv import load_dotenv
+load_dotenv()
 from .services.vision import detectar_cambios_visuales, dibujar_rectangulos_en_pdf
 from .services.pdf_tools import extraer_secciones_comparativas
 from .services.llm_agent import auditar_cambio_visual, generar_respuesta_chat
 
 app = FastAPI(title="PipeDreams - API Validador de Planos IA")
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ULTIMO_REPORTE_CONTEXTO = None
 

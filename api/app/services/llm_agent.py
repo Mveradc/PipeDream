@@ -13,12 +13,25 @@ DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME")
 
 cliente_inseguro = httpx.Client(verify=False)
 
-client = AzureOpenAI(
-    azure_endpoint=AZURE_ENDPOINT,
-    api_key=AZURE_API_KEY,
-    api_version=API_VERSION,
-    http_client=cliente_inseguro
-)
+# Cliente global (se inicializa de forma lazy)
+_client = None
+
+def get_client():
+    """Obtiene o crea el cliente de Azure OpenAI"""
+    global _client
+    if _client is None:
+        if not AZURE_API_KEY:
+            raise ValueError(
+                "No se encontraron las credenciales de Azure OpenAI. "
+                "Asegúrate de tener un archivo .env con AZURE_ENDPOINT, AZURE_API_KEY, API_VERSION y DEPLOYMENT_NAME"
+            )
+        _client = AzureOpenAI(
+            azure_endpoint=AZURE_ENDPOINT,
+            api_key=AZURE_API_KEY,
+            api_version=API_VERSION,
+            http_client=cliente_inseguro
+        )
+    return _client
 
 def codificar_imagen(ruta_imagen):
     """Codifica imagen a Base64."""
@@ -92,6 +105,7 @@ def auditar_cambio_visual(ruta_master, ruta_draft):
     """
 
     try:
+        client = get_client()
         response = client.chat.completions.create(
             model=DEPLOYMENT_NAME,
             messages=[
@@ -160,6 +174,7 @@ def generar_respuesta_chat(messages_history, datos_pdf_str=None, temperature=0.7
     ] + messages_history 
 
     try:
+        client = get_client()
         response = client.chat.completions.create(
             model=DEPLOYMENT_NAME,
             messages=mensajes_para_api, # <--- Pasamos la lista limpia
