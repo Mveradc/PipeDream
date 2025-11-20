@@ -6,7 +6,8 @@ import {
   Download,
   FileText,
   Upload,
-  Trash2
+  Trash2,
+  RotateCw
 } from "lucide-react";
 
 interface PDFViewerProps {
@@ -41,6 +42,27 @@ export function PDFViewer({
   const objectRef = useRef<HTMLObjectElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isInternalScrollRef = useRef<boolean>(false);
+  const [rotation, setRotation] = useState<number>(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (scrollContainerRef.current) {
+        setContainerSize({
+          width: scrollContainerRef.current.clientWidth,
+          height: scrollContainerRef.current.clientHeight
+        });
+      }
+    };
+    
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  const handleRotate = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
 
   // Sincronizar escala cuando está vinculado
   useEffect(() => {
@@ -143,6 +165,16 @@ export function PDFViewer({
     }
   };
 
+  const isRotated = rotation % 180 !== 0;
+  const currentWidth = containerSize.width || 800;
+  const currentHeight = containerSize.height || 600;
+  
+  const innerWidth = (isRotated ? currentHeight : currentWidth) * (scale / 100);
+  const innerHeight = (isRotated ? currentWidth : currentHeight) * (scale / 100);
+  
+  const wrapperWidth = isRotated ? innerHeight : innerWidth;
+  const wrapperHeight = isRotated ? innerWidth : innerHeight;
+
   return (
     <div 
       ref={containerRef}
@@ -230,6 +262,15 @@ export function PDFViewer({
               <Button 
                 variant="ghost" 
                 size="sm" 
+                onClick={handleRotate}
+                className="cursor-pointer"
+                title="Rotar PDF"
+              >
+                <RotateCw className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
                 onClick={handleFullscreen}
                 className="cursor-pointer"
               >
@@ -269,37 +310,41 @@ export function PDFViewer({
       {/* Área de visualización del PDF */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 bg-gray-100 relative"
-        style={{
-          overflow: scale > 100 ? 'auto' : 'hidden'
-        }}
+        className="flex-1 bg-gray-100 relative overflow-auto flex"
         onScroll={handleScroll}
       >
         {pdfUrl ? (
-          <div 
-            className="w-full h-full"
+          <div
+            className="m-auto flex-shrink-0 flex items-center justify-center"
             style={{
-              width: scale > 100 ? `${scale}%` : '100%',
-              height: scale > 100 ? `${scale}%` : '100%',
-              minWidth: scale > 100 ? `${scale}%` : '100%',
-              minHeight: scale > 100 ? `${scale}%` : '100%'
+              width: wrapperWidth,
+              height: wrapperHeight
             }}
           >
-            <embed
-              key={scale}
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-              type="application/pdf"
+            <div 
+              className="transition-transform duration-300 ease-in-out bg-white shadow-lg"
               style={{
-                width: '100%',
-                height: '100%',
-                minHeight: '1000px',
-                border: 'none',
-                backgroundColor: 'white'
+                width: innerWidth,
+                height: innerHeight,
+                transform: `rotate(${rotation}deg)`,
+                transformOrigin: 'center center'
               }}
-            />
+            >
+              <embed
+                key={scale}
+                src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                type="application/pdf"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: 'white'
+                }}
+              />
+            </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center w-full h-full">
             <div className="text-center">
               <div className="text-gray-400 mb-4">
                 <FileText className="w-16 h-16 mx-auto mb-4" />
