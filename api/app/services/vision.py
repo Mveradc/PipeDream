@@ -108,7 +108,7 @@ def dibujar_rectangulos_en_pdf(pdf_path: str, rects: list, output_path: str, cor
         x1, y1, x2, y2 = r
         rect = fitz.Rect(x1, y1, x2, y2)
         shape.draw_rect(rect)
-    print("COLOR",color)
+
     shape.finish(color=color, width=2)
     shape.commit()
 

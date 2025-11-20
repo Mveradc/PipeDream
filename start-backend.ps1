@@ -26,5 +26,5 @@ if (-not (Test-Path ".env")) {
 }
 
 # Iniciar servidor
-Write-Host "Iniciando servidor FastAPI en http://localhost:8000..." -ForegroundColor Green
-uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
+Write-Host "Iniciando servidor FastAPI en http://localhost:5000..." -ForegroundColor Green
+uvicorn app.app:app --reload --host 0.0.0.0 --port 5000
