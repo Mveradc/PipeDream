@@ -1,0 +1,54 @@
+# Sistema
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env
+.env.local
+.env.*.local
+
+# Python (si aplica)
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+venv/
+env/
+.venv/
+
+# Logs y cobertura
+logs/
+*.log
+coverage/
+coverage.xml
+*.lcov
+
+# Artefactos de build
+dist/
+build/
+tmp/
+*.tmp
+
+# Docker
+docker-compose.override.yml
+
+# Archivos temporales del editor
+*.swp
+*~
+*.bak
+
+# Ficheros
+/temp
