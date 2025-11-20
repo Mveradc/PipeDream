@@ -84,6 +84,8 @@ export default function App() {
               setCorrectedPdfUrl={setCorrectedPdfUrl}
               setMasterFile={setMasterFile}
               setDraftFile={setDraftFile}
+              masterFile={masterFile}
+              draftFile={draftFile}
             />
           </div>
 
