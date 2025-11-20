@@ -52,3 +52,7 @@ docker-compose.override.yml
 
 # Ficheros
 /temp
+*.pdf
+*.zip
+*.png
+__MACOSX/
