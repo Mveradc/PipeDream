@@ -5,12 +5,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 import shutil
 import os
+import base64
 from dotenv import load_dotenv
-
-# Cargar variables de entorno ANTES de importar servicios
 load_dotenv()
-
-from .services.vision import detectar_cambios_visuales
+from .services.vision import detectar_cambios_visuales, dibujar_rectangulos_en_pdf
 from .services.pdf_tools import extraer_secciones_comparativas
 from .services.llm_agent import auditar_cambio_visual, generar_respuesta_chat
 
@@ -40,21 +38,8 @@ class ReporteValidacion(BaseModel):
     cambios_aprobados: int
     cambios_fallidos: int
     detalles: List[DetalleCambio]
-
-class ChatRequest(BaseModel):
-    mensajes: List[str]
-
-class ChatResponse(BaseModel):
-    respuesta: str
-
-@app.get("/")
-async def root():
-    """Endpoint raíz para verificar que la API está funcionando"""
-    return {
-        "message": "PipeDreams - API Validador de Planos IA",
-        "version": "1.0.0",
-        "status": "online"
-    }
+    master_bbox: Optional[str] = None
+    draft_bbox: Optional[str] = None
 
 @app.post("/validar-pdf", response_model=ReporteValidacion)
 async def validar_planos(
@@ -93,26 +78,45 @@ async def validar_planos(
         # Simulamos el bucle de procesamiento
         resultados_ia = []
         detalles_respuesta = []
+        lista_incorrectas = []
+        lista_correctas = []
         for i, par in enumerate(pares_rutas):
             analisis = auditar_cambio_visual(par[0], par[1])
             resultados_ia.append(analisis)
-
+            correcta = analisis.get("veredicto", "FALLIDO")
+            if correcta == "APROBADO":
+                lista_correctas.append(rects[i])
+            elif correcta == "FALLIDO":
+                lista_incorrectas.append(rects[i])
+            
             result = DetalleCambio(
                 id_cambio=i, 
                 tipo_accion=analisis.get("Tipo de instrucción", "UNKNOWN"), 
-                veredicto=analisis.get("veredicto", "FAIL"), 
+                veredicto=correcta, 
                 razonamiento=analisis.get("explicacion", "Sin razonamiento.")
                 )
 
             detalles_respuesta.append(result)
 
+        os.makedirs(temp_dir + "/bbox/", exist_ok=True)
+        dibujar_rectangulos_en_pdf(path_master , lista_correctas, temp_dir + "/bbox/MASTER_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(path_draft , lista_correctas, temp_dir + "/bbox/DRAFT_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/MASTER_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/MASTER_tot.pdf", correct=False)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/DRAFT_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/DRAFT_tot.pdf", correct=False)
+        
         # 4. Construir respuesta final
+        with open(temp_dir + "/bbox/MASTER_tot.pdf", "rb") as f_master:
+            contenido_master = f_master.read()
+        with open(temp_dir + "/bbox/DRAFT_tot.pdf", "rb") as f_draft:
+            contenido_draft = f_draft.read()
         reporte = ReporteValidacion(
             filename=draft_file.filename,
             total_cambios_detectados=len(detalles_respuesta),
             cambios_aprobados=len([d for d in detalles_respuesta if d.veredicto == "APROBADO"]),
             cambios_fallidos=len([d for d in detalles_respuesta if d.veredicto == "FALLIDO"]),
-            detalles=detalles_respuesta
+            detalles=detalles_respuesta,
+            master_bbox=base64.b64encode(contenido_master).decode('utf-8'),
+            draft_bbox=base64.b64encode(contenido_draft).decode('utf-8')
         )
         
         ULTIMO_REPORTE_CONTEXTO = reporte.model_dump_json(indent=2)
@@ -128,26 +132,21 @@ async def validar_planos(
         # shutil.rmtree(temp_dir, ignore_errors=True)
         pass
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+@app.post("/chat", response_model=str)
+async def chat_endpoint(request: list[str]):
     """
-    Endpoint de Chatbot.
-    Recibe el historial de mensajes y devuelve la respuesta del LLM.
+    Endpoint de Chatbot con capacidad de Streaming.
+    Recibe el historial de mensajes y devuelve la respuesta del LLM token a token.
     """
     global ULTIMO_REPORTE_CONTEXTO
-    
     # Preparamos los mensajes en formato dict para la librería de OpenAI
-    formatted_messages = [{"role": "user", "content": msg} for msg in request.mensajes]
+    formatted_messages = [{"role": "user", "content": msg} for msg in request]
 
     contexto_actual = ULTIMO_REPORTE_CONTEXTO
-    
-    try:
-        # Llamamos a la función de generación de respuesta
-        respuesta_texto = generar_respuesta_chat(
-            formatted_messages,
-            datos_pdf_str=contexto_actual
+    # Llamamos a la función corregida pasando la LISTA, no solo el texto
+    respuesta_texto = generar_respuesta_chat(
+        formatted_messages,
+        datos_pdf_str=contexto_actual
         )
-        
-        return ChatResponse(respuesta=respuesta_texto)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en el chat: {str(e)}")
+    
+    return respuesta_texto
