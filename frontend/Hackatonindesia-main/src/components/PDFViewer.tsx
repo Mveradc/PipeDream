@@ -35,6 +35,7 @@ export function PDFViewer({
 }: PDFViewerProps) {
   const [scale, setScale] = useState<number>(100);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectRef = useRef<HTMLObjectElement>(null);
@@ -116,10 +117,40 @@ export function PDFViewer({
     fileInputRef.current?.click();
   };
 
+  // Drag & Drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // Only turn off when leaving the container (not children)
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type === 'application/pdf' && onLoadPdf) {
+      onLoadPdf(file);
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
-      className="flex flex-col h-full bg-white rounded-lg shadow-sm overflow-hidden border"
+      className="flex flex-col h-full bg-white rounded-lg shadow-sm overflow-hidden border relative"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* Barra de herramientas */}
       <div className="p-3 border-b bg-gray-50 flex items-center justify-between flex-shrink-0">
@@ -228,6 +259,12 @@ export function PDFViewer({
           ) : null}
         </div>
       </div>
+
+      {isDragging && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40 rounded-lg pointer-events-none">
+          <div className="text-white text-lg font-semibold">Suelta el PDF aquí</div>
+        </div>
+      )}
 
       {/* Área de visualización del PDF */}
       <div 
