@@ -4,7 +4,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 import shutil
 import os
-from .services.vision import detectar_cambios_visuales
+import base64
+from .services.vision import detectar_cambios_visuales, dibujar_rectangulos_en_pdf
 from .services.pdf_tools import extraer_secciones_comparativas
 from .services.llm_agent import auditar_cambio_visual, generar_respuesta_chat
 
@@ -25,6 +26,8 @@ class ReporteValidacion(BaseModel):
     cambios_aprobados: int
     cambios_fallidos: int
     detalles: List[DetalleCambio]
+    master_bbox: Optional[str] = None
+    draft_bbox: Optional[str] = None
 
 @app.post("/validar-pdf", response_model=ReporteValidacion)
 async def validar_planos(
@@ -63,26 +66,45 @@ async def validar_planos(
         # Simulamos el bucle de procesamiento
         resultados_ia = []
         detalles_respuesta = []
+        lista_incorrectas = []
+        lista_correctas = []
         for i, par in enumerate(pares_rutas):
             analisis = auditar_cambio_visual(par[0], par[1])
             resultados_ia.append(analisis)
-
+            correcta = analisis.get("veredicto", "FALLIDO")
+            if correcta == "APROBADO":
+                lista_correctas.append(rects[i])
+            elif correcta == "FALLIDO":
+                lista_incorrectas.append(rects[i])
+            
             result = DetalleCambio(
                 id_cambio=i, 
                 tipo_accion=analisis.get("Tipo de instrucción", "UNKNOWN"), 
-                veredicto=analisis.get("veredicto", "FAIL"), 
+                veredicto=correcta, 
                 razonamiento=analisis.get("explicacion", "Sin razonamiento.")
                 )
 
             detalles_respuesta.append(result)
 
+        os.makedirs(temp_dir + "/bbox/", exist_ok=True)
+        dibujar_rectangulos_en_pdf(path_master , lista_correctas, temp_dir + "/bbox/MASTER_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(path_draft , lista_correctas, temp_dir + "/bbox/DRAFT_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/MASTER_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/MASTER_tot.pdf", correct=False)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/DRAFT_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/DRAFT_tot.pdf", correct=False)
+        
         # 4. Construir respuesta final
+        with open(temp_dir + "/bbox/MASTER_tot.pdf", "rb") as f_master:
+            contenido_master = f_master.read()
+        with open(temp_dir + "/bbox/DRAFT_tot.pdf", "rb") as f_draft:
+            contenido_draft = f_draft.read()
         reporte = ReporteValidacion(
             filename=draft_file.filename,
             total_cambios_detectados=len(detalles_respuesta),
             cambios_aprobados=len([d for d in detalles_respuesta if d.veredicto == "APROBADO"]),
             cambios_fallidos=len([d for d in detalles_respuesta if d.veredicto == "FALLIDO"]),
-            detalles=detalles_respuesta
+            detalles=detalles_respuesta,
+            master_bbox=base64.b64encode(contenido_master).decode('utf-8'),
+            draft_bbox=base64.b64encode(contenido_draft).decode('utf-8')
         )
         
         ULTIMO_REPORTE_CONTEXTO = reporte.model_dump_json(indent=2)
