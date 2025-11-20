@@ -55,6 +55,9 @@ Thumbs.db
 # Archivos temporales del proyecto
 api/api/temp/
 *.pdf
+__MACOSX/
 
 # Archivos de configuración local
 *.local
+*.png
+*.zip
