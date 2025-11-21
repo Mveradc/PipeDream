@@ -1,9 +1,23 @@
+# Sistema
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# Node.js
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+.venv/
 venv/
 env/
 ENV/
@@ -42,6 +56,9 @@ Thumbs.db
 # Archivos temporales del proyecto
 api/api/temp/
 *.pdf
+__MACOSX/
 
 # Archivos de configuración local
 *.local
+*.png
+*.zip

@@ -48,13 +48,13 @@ export function MetricsGrid({ isOpen, setIsOpen, validationData, isLoading }: Me
 
   return (
     <div
-      className={`bg-white border-t shadow-lg transition-all duration-300 ease-in-out ${
-        isOpen ? "h-auto" : "h-12"
-      } overflow-hidden`}
+      className={`bg-white border-t shadow-lg transition-all duration-300 ease-in-out absolute bottom-0 left-0 right-0 z-20 flex flex-col ${
+        isOpen ? "h-full" : "h-12"
+      }`}
     >
       {/* Botón toggle */}
       <div
-        className="h-12 p-2 bg-gray-100 border-b flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+        className="h-12 p-2 bg-gray-100 border-b flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors flex-shrink-0"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Button variant="ghost" size="sm" className="gap-2">
@@ -74,79 +74,82 @@ export function MetricsGrid({ isOpen, setIsOpen, validationData, isLoading }: Me
 
       {/* Contenido de métricas */}
       {isOpen && (
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center h-full">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               <span className="ml-3 text-gray-600">Analizando planos...</span>
             </div>
           ) : validationData ? (
-            <>
-              <div className="flex items-stretch gap-6 max-w-7xl mx-auto mb-6">
-                {metrics.map((metric, index) => (
-              <Card
-                key={metric.id}
-                className="flex-1 p-6 transition-all hover:shadow-md"
-              >
-                {index === 2 ? (
-                  // Tarjeta especial con gráfico circular para el porcentaje
-                  <div className="flex items-center gap-4">
-                    {/* Gráfico circular */}
-                    <div className="relative w-24 h-24 flex-shrink-0">
-                      <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Círculo de fondo */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="40"
-                          fill="none"
-                          stroke="#e5e7eb"
-                          strokeWidth="8"
-                        />
-                        {/* Círculo de progreso */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="40"
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="8"
-                          strokeDasharray={`${(circleProgress / 360) * 251.2} 251.2`}
-                          strokeLinecap="round"
-                          className="transition-all duration-1000 ease-out"
-                        />
-                      </svg>
-                      {/* Texto en el centro */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xl font-bold text-green-600">{porcentajeCorrectas}%</span>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-1">{metric.label}</p>
-                      <p className="text-2xl font-bold text-gray-900">{totalComentarios - modificacionesIncorrectas}/{totalComentarios}</p>
-                      <p className="text-xs text-gray-500 mt-1">Modificaciones correctas</p>
-                    </div>
-                  </div>
-                ) : (
-                  // Tarjetas normales
-                  <div className="flex items-center gap-4">
-                    <div className={`p-4 rounded-lg ${metric.color}`}>
-                      {metric.icon}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-600 mb-1">{metric.label}</p>
-                      <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            ))}
+            <div className="flex flex-col h-full p-6 gap-6 overflow-hidden">
+              {/* Métricas Superiores (Fijas) */}
+              <div className="flex-shrink-0">
+                <div className="flex items-stretch gap-6 max-w-7xl mx-auto">
+                  {metrics.map((metric, index) => (
+                    <Card
+                      key={metric.id}
+                      className="flex-1 p-6 transition-all hover:shadow-md"
+                    >
+                      {index === 2 ? (
+                        // Tarjeta especial con gráfico circular para el porcentaje
+                        <div className="flex items-center gap-4">
+                          {/* Gráfico circular */}
+                          <div className="relative w-24 h-24 flex-shrink-0">
+                            <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                              {/* Círculo de fondo */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke="#e5e7eb"
+                                strokeWidth="8"
+                              />
+                              {/* Círculo de progreso */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke="#10b981"
+                                strokeWidth="8"
+                                strokeDasharray={`${(circleProgress / 360) * 251.2} 251.2`}
+                                strokeLinecap="round"
+                                className="transition-all duration-1000 ease-out"
+                              />
+                            </svg>
+                            {/* Texto en el centro */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xl font-bold text-green-600">{porcentajeCorrectas}%</span>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 mb-1">{metric.label}</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalComentarios - modificacionesIncorrectas}/{totalComentarios}</p>
+                            <p className="text-xs text-gray-500 mt-1">Modificaciones correctas</p>
+                          </div>
+                        </div>
+                      ) : (
+                        // Tarjetas normales
+                        <div className="flex items-center gap-4">
+                          <div className={`p-4 rounded-lg ${metric.color}`}>
+                            {metric.icon}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 mb-1">{metric.label}</p>
+                            <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
               </div>
               
-              {/* Detalles de cambios */}
-              <div className="max-w-7xl mx-auto">
-                <h3 className="text-lg font-semibold mb-4">Detalles de Cambios</h3>
-                <div className="space-y-2">
+              {/* Detalles de cambios (Scrollable) */}
+              <div className="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full">
+                <h3 className="text-lg font-semibold mb-4 flex-shrink-0">Detalles de Cambios</h3>
+                <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-2 border rounded-lg p-4 bg-gray-50 shadow-inner" style={{ minHeight: 0 }}>
                   {validationData.detalles.map((detalle) => (
                     <Card 
                       key={detalle.id_cambio}
@@ -191,9 +194,9 @@ export function MetricsGrid({ isOpen, setIsOpen, validationData, isLoading }: Me
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="flex items-center justify-center h-full text-gray-500">
               Carga dos planos y haz clic en "Validar Planos" para ver los resultados
             </div>
           )}
