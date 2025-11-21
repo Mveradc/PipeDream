@@ -59,7 +59,7 @@ export async function enviarMensajeChat(mensaje: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.respuesta;
+  return data;
 }
 
 /**
