@@ -57,7 +57,6 @@ export function PlanoViewer({
       <PDFViewer 
         title="Plano Master"
         pdfUrl={masterPdfUrl}
-        fileName={masterFile?.name}
         onLoadPdf={handleMasterPdfLoad}
         onClearPdf={handleClearMasterPdf}
       />
@@ -66,7 +65,6 @@ export function PlanoViewer({
       <PDFViewer 
         title="Plano Corregido"
         pdfUrl={correctedPdfUrl}
-        fileName={draftFile?.name}
         onLoadPdf={handleCorrectedPdfLoad}
         onClearPdf={handleClearCorrectedPdf}
       />
