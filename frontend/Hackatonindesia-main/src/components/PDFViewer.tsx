@@ -13,6 +13,7 @@ import {
 interface PDFViewerProps {
   title: string;
   pdfUrl?: string;
+  fileName?: string;
   onLoadPdf?: (file: File) => void;
   onClearPdf?: () => void;
   // Props para sincronización
@@ -26,6 +27,7 @@ interface PDFViewerProps {
 export function PDFViewer({ 
   title, 
   pdfUrl, 
+  fileName,
   onLoadPdf, 
   onClearPdf,
   isLinked = false,
@@ -187,7 +189,12 @@ export function PDFViewer({
       {/* Barra de herramientas */}
       <div className="p-3 border-b bg-gray-50 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="text-gray-700 font-medium">{title}</h2>
+          <h2 className="text-gray-700 font-medium">
+            {title}
+            {fileName ? (
+              <span className="text-sm font-normal text-gray-500 ml-2">{fileName}</span>
+            ) : null}
+          </h2>
         </div>
         
         <div className="flex items-center gap-1">
@@ -348,7 +355,12 @@ export function PDFViewer({
             <div className="text-center">
               <div className="text-gray-400 mb-4">
                 <FileText className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">{title}</p>
+                <p className="text-lg font-medium mb-2">
+                  {title}
+                  {fileName ? (
+                    <span className="text-sm font-normal text-gray-500 ml-2 block md:inline">{fileName}</span>
+                  ) : null}
+                </p>
                 <p className="text-sm mb-4">No hay documento cargado</p>
               </div>
               <input

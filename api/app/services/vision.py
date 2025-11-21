@@ -85,3 +85,33 @@ def detectar_cambios_visuales(pdf_path, output_path, zoom=2.0, kernel_size=15):
     print(f"¡HECHO! Se han marcado {contador_cambios} grupos finales en '{output_path}'")
 
     return bboxes_finales
+
+def dibujar_rectangulos_en_pdf(pdf_path: str, rects: list, output_path: str, correct: bool = True):
+    """
+    Dibuja rectángulos en un PDF y los colorea según el parámetro 'correct':
+      - correct=True  -> verde
+      - correct=False -> rojo
+
+    rects = [(x1, y1, x2, y2), ...]
+    """
+
+    # Colores RGB
+    verde = (0, 1, 0)
+    rojo = (1, 0, 0)
+
+    color = verde if correct else rojo
+
+    doc = fitz.open(pdf_path)
+    page = doc[0]
+    shape = page.new_shape()
+    for r in rects:
+        x1, y1, x2, y2 = r
+        rect = fitz.Rect(x1, y1, x2, y2)
+        shape.draw_rect(rect)
+
+    shape.finish(color=color, width=2)
+    shape.commit()
+
+    doc.save(output_path)
+    
+    return output_path

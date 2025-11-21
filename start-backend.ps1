@@ -92,14 +92,5 @@ if (-not (Test-Path "temp")) {
 }
 
 # Iniciar servidor
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "Iniciando servidor FastAPI..." -ForegroundColor Green
-Write-Host "URL: http://localhost:8000" -ForegroundColor Cyan
-Write-Host "Docs: http://localhost:8000/docs" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Presiona Ctrl+C para detener el servidor" -ForegroundColor Yellow
-Write-Host ""
-
-uvicorn app.app:app --reload --host 127.0.0.1 --port 8000
+Write-Host "Iniciando servidor FastAPI en http://localhost:5000..." -ForegroundColor Green
+uvicorn app.app:app --reload --host 0.0.0.0 --port 5000

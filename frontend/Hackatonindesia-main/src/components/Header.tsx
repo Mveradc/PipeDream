@@ -18,7 +18,7 @@ export function Header({ onOpenChat, onOpenHistory, onAnalyze, canAnalyze, isAna
         <ImageWithFallback 
           src={logo} 
           alt="Técnicas Reunidas" 
-          className="h-10 w-auto"
+          className="h-16 w-auto"
         />
         
         {/* Botón de Análisis */}

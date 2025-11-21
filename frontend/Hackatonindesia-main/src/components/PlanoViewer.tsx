@@ -7,6 +7,8 @@ interface PlanoViewerProps {
   setCorrectedPdfUrl: (url: string | undefined) => void;
   setMasterFile: (file: File | null) => void;
   setDraftFile: (file: File | null) => void;
+  masterFile?: File | null;
+  draftFile?: File | null;
 }
 
 export function PlanoViewer({ 
@@ -16,6 +18,9 @@ export function PlanoViewer({
   setCorrectedPdfUrl,
   setMasterFile,
   setDraftFile
+  ,
+  masterFile,
+  draftFile
 }: PlanoViewerProps) {
   
   const handleMasterPdfLoad = (file: File) => {
@@ -52,6 +57,7 @@ export function PlanoViewer({
       <PDFViewer 
         title="Plano Master"
         pdfUrl={masterPdfUrl}
+        fileName={masterFile?.name}
         onLoadPdf={handleMasterPdfLoad}
         onClearPdf={handleClearMasterPdf}
       />
@@ -60,6 +66,7 @@ export function PlanoViewer({
       <PDFViewer 
         title="Plano Corregido"
         pdfUrl={correctedPdfUrl}
+        fileName={draftFile?.name}
         onLoadPdf={handleCorrectedPdfLoad}
         onClearPdf={handleClearCorrectedPdf}
       />
