@@ -1,7 +1,7 @@
 # PipeDream
+> 🏆 Solución ganadora del reto propuesto por TECNICAS REUNIDAS - BRAVENT en la IndesIAhack 2025.
 
-## Descripción
-Repositorio con el código fuente y recursos del proyecto presentado en el hackathon. Contiene un prototipo utilizable, documentación mínima y scripts para ejecutar el proyecto localmente.
+Este repositorio contiene el código fuente y recursos del proyecto presentado en el hackathon. Contiene un prototipo utilizable, documentación mínima y scripts para ejecutar el proyecto localmente.
 
 ## Tecnologías
 - Lenguajes: Python / JavaScript (ajustar según el contenido real)
