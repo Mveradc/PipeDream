@@ -16,5 +16,5 @@ if (-not (Test-Path ".env")) {
 }
 
 # Iniciar servidor de desarrollo
-Write-Host "Iniciando servidor Vite en http://localhost:5173..." -ForegroundColor Green
+Write-Host "Iniciando servidor Vite en http://localhost:3000..." -ForegroundColor Green
 npm run dev

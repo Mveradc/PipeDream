@@ -2,6 +2,11 @@ import fitz
 import cv2
 import numpy as np
 
+# --- Parámetros de detección (los que más afectan al resultado) ---
+SATURACION_MINIMA = 20   # umbral HSV: por debajo se considera gris/negro (sin marca)
+DILATACION_ITERS = 2     # nº de pasadas de dilatación para fusionar marcas cercanas
+AREA_MINIMA = 500        # área (px²) mínima de un contorno para no descartarlo como ruido
+
 def detectar_cambios_visuales(pdf_path, output_path, zoom=2.0, kernel_size=15):
     """
     Parametros:
@@ -43,13 +48,13 @@ def detectar_cambios_visuales(pdf_path, output_path, zoom=2.0, kernel_size=15):
     # Los colores vivos tienen S alta.
     saturacion = hsv[:, :, 1]
     
-    # Filtramos: Nos quedamos con todo lo que tenga saturación > 20 (ajustable)
-    _, mask = cv2.threshold(saturacion, 20, 255, cv2.THRESH_BINARY)
+    # Filtramos: Nos quedamos con todo lo que tenga saturación > umbral (ajustable)
+    _, mask = cv2.threshold(saturacion, SATURACION_MINIMA, 255, cv2.THRESH_BINARY)
 
     # --- FUSIÓN (Dilatación) ---
     # Aquí ocurre la magia: Expandimos lo blanco para unir islas cercanas
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    mask_dilatada = cv2.dilate(mask, kernel, iterations=2)
+    mask_dilatada = cv2.dilate(mask, kernel, iterations=DILATACION_ITERS)
 
     # --- ENCONTRAR CONTORNOS ---
     contornos, _ = cv2.findContours(mask_dilatada, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -65,7 +70,7 @@ def detectar_cambios_visuales(pdf_path, output_path, zoom=2.0, kernel_size=15):
         x, y, w, h = cv2.boundingRect(cnt)
         
         # Filtro de ruido: Si el área es muy pequeña, la ignoramos
-        if w * h < 500: 
+        if w * h < AREA_MINIMA:
             continue
 
         # Convertimos coordenadas de Píxeles (Imagen) a Puntos (PDF)

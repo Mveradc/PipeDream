@@ -18,8 +18,8 @@ def extraer_secciones_comparativas(path_original, path_modificado, rects, output
     Recorta las secciones correspondientes en ambos PDFs.
     
     Args:
-        path_original: Ruta del PDF con anotaciones (Draft).
-        path_modificado: Ruta del PDF final (Master).
+        path_original: Ruta del PDF MASTER (con las marcas de revisión en color).
+        path_modificado: Ruta del PDF DRAFT (resultado limpio a verificar).
         rects: Lista de objetos fitz.Rect obtenidos en el paso anterior.
         output_folder: Carpeta donde guardar las imágenes recortadas.
     """

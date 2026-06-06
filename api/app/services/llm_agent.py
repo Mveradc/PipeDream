@@ -11,7 +11,11 @@ AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 API_VERSION = os.getenv("API_VERSION")
 DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME")
 
-cliente_inseguro = httpx.Client(verify=False)
+# verify se controla por entorno: por defecto se desactiva la verificación SSL
+# (necesario tras proxies corporativos), pero se puede activar con AZURE_VERIFY_SSL=true.
+VERIFY_SSL = os.getenv("AZURE_VERIFY_SSL", "false").lower() == "true"
+# timeout para que una llamada colgada al LLM no bloquee la petición indefinidamente
+cliente_inseguro = httpx.Client(verify=VERIFY_SSL, timeout=60.0)
 
 # Cliente global (se inicializa de forma lazy)
 _client = None
@@ -112,12 +116,12 @@ def auditar_cambio_visual(ruta_master, ruta_draft):
                 {"role": "system", "content": "Eres un auditor de planos estricto. Responde solo en JSON."},
                 {"role": "user", "content": [
                     {"type": "text", "text": prompt_auditor},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_master_b64}"}},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_draft_b64}"}}
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_master_b64}"}},
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_draft_b64}"}}
                 ]}
             ],
-            temperature=0.0, 
-            max_completion_tokens=300, 
+            temperature=0.0,
+            max_completion_tokens=800,
             response_format={"type": "json_object"}
         )
         

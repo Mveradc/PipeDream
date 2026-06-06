@@ -99,11 +99,11 @@ fi
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}Iniciando servidor FastAPI...${NC}"
-echo -e "${CYAN}URL: http://localhost:8000${NC}"
-echo -e "${CYAN}Docs: http://localhost:8000/docs${NC}"
+echo -e "${CYAN}URL: http://localhost:5000${NC}"
+echo -e "${CYAN}Docs: http://localhost:5000/docs${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${YELLOW}Presiona Ctrl+C para detener el servidor${NC}"
 echo ""
 
-uvicorn app.app:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.app:app --reload --host 0.0.0.0 --port 5000

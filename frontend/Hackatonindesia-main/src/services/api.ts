@@ -15,6 +15,9 @@ export interface ReporteValidacion {
   cambios_aprobados: number;
   cambios_fallidos: number;
   detalles: DetalleCambio[];
+  // PDFs anotados (recuadros verde=aprobado / rojo=fallido) como data URI base64
+  master_bbox?: string | null;
+  draft_bbox?: string | null;
 }
 
 /**

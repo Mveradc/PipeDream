@@ -6,13 +6,26 @@ from typing import List, Optional
 import shutil
 import os
 import base64
+import logging
+import uuid
 from dotenv import load_dotenv
 load_dotenv()
 from .services.vision import detectar_cambios_visuales, dibujar_rectangulos_en_pdf
 from .services.pdf_tools import extraer_secciones_comparativas
 from .services.llm_agent import auditar_cambio_visual, generar_respuesta_chat
 
+logger = logging.getLogger("pipedreams")
+
 app = FastAPI(title="PipeDreams - API Validador de Planos IA")
+
+
+def _pdf_a_base64(ruta_pdf: str) -> Optional[str]:
+    """Lee un PDF y lo devuelve como data URI base64 (o None si no existe)."""
+    if not os.path.exists(ruta_pdf):
+        return None
+    with open(ruta_pdf, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:application/pdf;base64,{b64}"
 
 # Configurar CORS
 app.add_middleware(
@@ -44,17 +57,33 @@ class ReporteValidacion(BaseModel):
     master_bbox: Optional[str] = None
     draft_bbox: Optional[str] = None
 
+def _validar_es_pdf(archivo: UploadFile):
+    """Comprueba que el fichero subido sea un PDF; lanza 400 si no lo es."""
+    nombre = (archivo.filename or "").lower()
+    es_pdf = nombre.endswith(".pdf") or archivo.content_type == "application/pdf"
+    if not es_pdf:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El fichero '{archivo.filename}' no es un PDF válido.",
+        )
+
+
 @app.post("/validar-pdf", response_model=ReporteValidacion)
 def validar_planos(
-    master_file: UploadFile = File(...), 
+    master_file: UploadFile = File(...),
     draft_file: UploadFile = File(...)
 ):
     global ULTIMO_REPORTE_CONTEXTO
-    # 1. Generar un ID único para esta ejecución (para carpetas temporales)
-    job_id = master_file.filename.split(".")[0].split("-")[-1]
+    # 0. Validar que ambos ficheros son PDFs antes de tocar disco
+    _validar_es_pdf(master_file)
+    _validar_es_pdf(draft_file)
+
+    # 1. ID único e impredecible por ejecución (evita colisiones y path traversal
+    #    derivados del nombre de fichero que controla el cliente)
+    job_id = uuid.uuid4().hex
     temp_dir = f"temp/{job_id}"
     os.makedirs(temp_dir, exist_ok=True)
-    
+
     try:
         # 2. Guardar ficheros en disco (mejor que en RAM para PDFs grandes)
         path_master = f"{temp_dir}/master.pdf"
@@ -78,56 +107,67 @@ def validar_planos(
             temp_dir + "/secciones"
             )
         
-        # Simulamos el bucle de procesamiento
-        resultados_ia = []
+        # Bucle de auditoría: una llamada a la IA por cada zona de cambio
         detalles_respuesta = []
         lista_incorrectas = []
         lista_correctas = []
         for i, par in enumerate(pares_rutas):
             analisis = auditar_cambio_visual(par[0], par[1])
-            resultados_ia.append(analisis)
-            correcta = analisis.get("veredicto", "FALLIDO")
-            if correcta == "APROBADO":
+            veredicto = analisis.get("veredicto", "ERROR")
+            if veredicto == "APROBADO":
                 lista_correctas.append(rects[i])
-            elif correcta == "FALLIDO":
+            elif veredicto == "FALLIDO":
                 lista_incorrectas.append(rects[i])
-            
-            result = DetalleCambio(
-                id_cambio=i, 
-                tipo_accion=analisis.get("Tipo de instrucción", "UNKNOWN"), 
-                veredicto=correcta, 
-                razonamiento=analisis.get("explicacion", "Sin razonamiento.")
-                )
+            # veredicto == "ERROR" -> ni aprobado ni fallido, pero se reporta
 
-            detalles_respuesta.append(result)
+            detalles_respuesta.append(DetalleCambio(
+                id_cambio=i,
+                tipo_accion=analisis.get("Tipo de instrucción", "UNKNOWN"),
+                veredicto=veredicto,
+                razonamiento=analisis.get("explicacion", "Sin razonamiento."),
+            ))
 
         os.makedirs(temp_dir + "/bbox/", exist_ok=True)
-        dibujar_rectangulos_en_pdf(path_master , lista_correctas, temp_dir + "/bbox/MASTER_corr.pdf", correct=True)
-        dibujar_rectangulos_en_pdf(path_draft , lista_correctas, temp_dir + "/bbox/DRAFT_corr.pdf", correct=True)
-        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/MASTER_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/MASTER_tot.pdf", correct=False)
-        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/DRAFT_corr.pdf" , lista_incorrectas, temp_dir + "/bbox/DRAFT_tot.pdf", correct=False)
-        
-        # 4. Construir respuesta final
+        master_tot = temp_dir + "/bbox/MASTER_tot.pdf"
+        draft_tot = temp_dir + "/bbox/DRAFT_tot.pdf"
+        dibujar_rectangulos_en_pdf(path_master, lista_correctas, temp_dir + "/bbox/MASTER_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(path_draft, lista_correctas, temp_dir + "/bbox/DRAFT_corr.pdf", correct=True)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/MASTER_corr.pdf", lista_incorrectas, master_tot, correct=False)
+        dibujar_rectangulos_en_pdf(temp_dir + "/bbox/DRAFT_corr.pdf", lista_incorrectas, draft_tot, correct=False)
+
+        # 4. Construir respuesta final (incluye los PDFs anotados en base64
+        #    para que el frontend pueda mostrar el resultado visual)
         reporte = ReporteValidacion(
             filename=draft_file.filename,
             total_cambios_detectados=len(detalles_respuesta),
             cambios_aprobados=len([d for d in detalles_respuesta if d.veredicto == "APROBADO"]),
             cambios_fallidos=len([d for d in detalles_respuesta if d.veredicto == "FALLIDO"]),
-            detalles=detalles_respuesta
+            detalles=detalles_respuesta,
+            master_bbox=_pdf_a_base64(master_tot),
+            draft_bbox=_pdf_a_base64(draft_tot),
         )
-        
-        ULTIMO_REPORTE_CONTEXTO = reporte.model_dump_json(indent=2)
-        
+
+        # Para el chat solo guardamos los datos textuales (sin los PDFs base64,
+        # que inflarían el contexto del LLM sin aportar nada)
+        ULTIMO_REPORTE_CONTEXTO = reporte.model_dump_json(
+            indent=2, exclude={"master_bbox", "draft_bbox"}
+        )
+
         return reporte
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error procesando PDFs: {str(e)}")
-    
+        logger.exception("Error procesando PDFs (job_id=%s)", job_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno procesando los PDFs. Revisa los logs del servidor.",
+        )
+
     finally:
-        # 5. LIMPIEZA
-        # Borrar carpeta temporal pase lo que pase
-        # shutil.rmtree(temp_dir, ignore_errors=True)
-        pass
+        # 5. LIMPIEZA: borrar la carpeta temporal pase lo que pase. Los PDFs ya
+        #    se han leído a base64 en el reporte, así que es seguro eliminarlos.
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.post("/chat", response_model=str)
 def chat_endpoint(body: ChatRequest):
