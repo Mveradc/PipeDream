@@ -80,4 +80,4 @@ PipeDream/
 
 ## Team
 
-Built at IndesIAhack 2025 by Miguel Vera ([@Mveradc](https://github.com/Mveradc)), Alejandro Cuevas and Diego Besada.
+Built at IndesIAhack 2025 by Miguel Vera ([@Mveradc](https://github.com/Mveradc)), Alejandro Cuevas, Pablo Alcolea, Mauro Perez and Diego Besada.
