@@ -1,123 +1,83 @@
 # PipeDream
 
-> 🏆 Solución ganadora del reto propuesto por **Técnicas Reunidas – Bravent** en la **IndesIAhack 2025**.
+> 🏆 Winning solution of the **Técnicas Reunidas × Bravent** challenge at **IndesIAhack 2025**.
 
-PipeDream es un **validador de planos de ingeniería P&ID** asistido por IA. Compara dos versiones en PDF de un mismo plano:
+PipeDream is an AI-assisted validator for engineering **P&ID drawings**. It compares two PDF versions of the same drawing:
 
-- **MASTER**: el plano revisado a mano, con las correcciones marcadas en colores (rojo, amarillo, azul).
-- **DRAFT**: la versión "final" que supuestamente aplica esas correcciones.
+- **MASTER**: the drawing reviewed by hand, with corrections marked in color (red, yellow, blue).
+- **DRAFT**: the "final" version that is supposed to apply those corrections.
 
-El sistema detecta automáticamente cada zona modificada, audita con un modelo de visión si el cambio se aplicó correctamente, y devuelve un informe por cambio (**APROBADO / FALLIDO**) junto con los PDFs anotados (recuadros verdes = correctos, rojos = incorrectos). Incluye además un chatbot que responde preguntas sobre el último informe generado.
+It detects every marked change, uses a vision model to check whether each one was applied correctly, and returns a per-change report (**PASS / FAIL**) with annotated PDFs (green boxes for correct changes, red for incorrect ones). A chatbot answers questions about the last report.
 
-## Cómo funciona
+## How it works
 
-El endpoint `/validar-pdf` encadena tres etapas:
+The `/validar-pdf` endpoint chains three stages:
 
-1. **Detección visual** (`OpenCV` + `PyMuPDF`): renderiza el MASTER, lo pasa a HSV y umbraliza el canal de **saturación** — las marcas de color destacan sobre el dibujo en blanco y negro. Una dilatación morfológica fusiona marcas cercanas y se extraen las cajas de cada cambio.
-2. **Recorte comparativo**: por cada caja, recorta la misma región en el MASTER y en el DRAFT a imágenes PNG.
-3. **Auditoría con IA** (`Azure OpenAI`, visión): envía cada par de imágenes con un prompt que codifica las reglas de color (amarillo = borrar, rojo = añadir, azul = instrucción, y combinaciones) y devuelve un veredicto en JSON.
+1. **Visual detection** (`OpenCV` + `PyMuPDF`): renders the MASTER, converts it to HSV and thresholds the **saturation** channel, so color marks stand out from the black-and-white drawing. Morphological dilation merges nearby marks and a bounding box is extracted for each change.
+2. **Side-by-side crops**: for each box, crops the same region from the MASTER and the DRAFT as PNG images.
+3. **AI audit** (`Azure OpenAI`, vision): sends each image pair with a prompt that encodes the color rules (yellow = delete, red = add, blue = instruction, and their combinations) and gets a verdict back as JSON.
 
 ## Stack
 
-| Capa     | Tecnologías |
-|----------|-------------|
-| Backend  | Python 3.11, FastAPI, Uvicorn, PyMuPDF (`fitz`), OpenCV, Azure OpenAI |
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Radix UI / shadcn |
-| Infra    | Docker / docker-compose |
+| Layer | Technologies |
+|---|---|
+| Backend | Python 3.11, FastAPI, Uvicorn, PyMuPDF, OpenCV, Azure OpenAI |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| Infra | Docker, docker-compose |
 
-## Requisitos
+## Run it
 
-- Python 3.10+ (el contenedor usa 3.11)
-- Node.js 18+ y npm
-- Una cuenta de **Azure OpenAI** con un *deployment* de un modelo con visión
-- Docker (opcional, para levantar el backend en contenedor)
-
-## Configuración
-
-El backend necesita credenciales de Azure OpenAI. Copia el ejemplo y rellena tus valores:
+Requirements: Python 3.10+, Node.js 18+ and an **Azure OpenAI** deployment of a vision model.
 
 ```bash
 cd api
-cp .env.example .env
+cp .env.example .env    # fill in AZURE_ENDPOINT, AZURE_API_KEY, API_VERSION, DEPLOYMENT_NAME
 ```
 
-Variables (en `api/.env`):
-
-| Variable           | Descripción |
-|--------------------|-------------|
-| `AZURE_ENDPOINT`   | Endpoint del recurso, **debe terminar en `/`** |
-| `AZURE_API_KEY`    | Clave de la API |
-| `API_VERSION`      | Versión de la API (p. ej. `2024-02-15-preview`) |
-| `DEPLOYMENT_NAME`  | Nombre del *deployment* del modelo |
-| `AZURE_VERIFY_SSL` | `false` por defecto (útil tras proxies corporativos); `true` para verificar TLS |
-
-El frontend usa `VITE_API_URL` (por defecto `http://localhost:5000`); copia `frontend/Hackatonindesia-main/.env.example` a `.env` si necesitas cambiarlo.
-
-## Ejecución
-
-### Backend (puerto 5000)
-
-Con los scripts de arranque (crean el venv, instalan dependencias y levantan Uvicorn):
-
-```powershell
-.\start-backend.ps1      # Windows
-```
-```bash
-./start-backend.sh       # Linux / macOS
-```
-
-Con Docker:
+**Backend** (port 5000):
 
 ```bash
-cd api
-docker compose up --build
+./start-backend.sh          # Linux / macOS (.\start-backend.ps1 on Windows)
+# or: cd api && docker compose up --build
 ```
 
-Manualmente:
+Interactive API docs at `http://localhost:5000/docs`.
 
-```bash
-cd api
-uvicorn app.app:app --reload --host 0.0.0.0 --port 5000
-```
+**Frontend** (port 3000):
 
-Documentación interactiva de la API en `http://localhost:5000/docs`.
-
-### Frontend (puerto 3000)
-
-```powershell
-.\start-frontend.ps1
-```
 ```bash
 cd frontend/Hackatonindesia-main
 npm install
 npm run dev
 ```
 
-## Endpoints
+## API
 
-| Método | Ruta           | Descripción |
-|--------|----------------|-------------|
-| `POST` | `/validar-pdf` | Recibe `master_file` y `draft_file` (multipart). Devuelve el informe de validación y los PDFs anotados en base64. |
-| `POST` | `/chat`        | Recibe `{ "mensajes": ["..."] }`. Responde sobre el último informe validado. |
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/validar-pdf` | Takes `master_file` and `draft_file` (multipart). Returns the validation report and the annotated PDFs in base64. |
+| `POST` | `/chat` | Takes `{ "mensajes": ["..."] }`. Answers questions about the last report. |
 
-## Estructura
+## Project structure
 
 ```
 PipeDream/
-├── api/                     # Backend FastAPI
-│   ├── app/
-│   │   ├── app.py           # Endpoints y orquestación del pipeline
-│   │   └── services/
-│   │       ├── vision.py    # Detección de cambios (OpenCV) y dibujo de cajas
-│   │       ├── pdf_tools.py # Recorte de secciones comparativas
-│   │       └── llm_agent.py # Cliente Azure OpenAI (auditoría + chat)
-│   ├── Dockerfile
-│   └── docker-compose.yaml
-├── frontend/Hackatonindesia-main/   # UI React + Vite
-└── PipeDream_DataFlow.ipynb         # Notebook de prototipado
+├── api/                            # FastAPI backend
+│   └── app/
+│       ├── app.py                  # endpoints and pipeline orchestration
+│       └── services/
+│           ├── vision.py           # change detection (OpenCV) and box drawing
+│           ├── pdf_tools.py        # side-by-side crops
+│           └── llm_agent.py        # Azure OpenAI client (audit + chat)
+├── frontend/Hackatonindesia-main/  # React + Vite UI
+└── PipeDream_DataFlow.ipynb        # prototyping notebook
 ```
 
-## Limitaciones conocidas
+## Known limitations
 
-- Solo se procesa la **primera página** de cada PDF.
-- El contexto del chat es un **estado global**: el servidor atiende un informe a la vez (sin aislamiento por usuario).
+- Only the **first page** of each PDF is processed.
+- The chat context is **global state**: the server handles one report at a time, with no per-user isolation.
+
+## Team
+
+Built at IndesIAhack 2025 by Miguel Vera ([@Mveradc](https://github.com/Mveradc)), Alejandro Cuevas and Diego Besada.
