@@ -1,0 +1,3 @@
+# Language stats: shadcn/ui components and notebooks are generated or vendored code
+frontend/Hackatonindesia-main/src/components/ui/** linguist-vendored
+*.ipynb linguist-documentation
